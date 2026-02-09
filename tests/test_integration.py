@@ -123,7 +123,48 @@ async def run_integration_test():
         )
         print(f"Set work item 1 as parent of work item 2")
 
-        # 5. Delete work items
+        # 5. Create epic with work item 1 as the underlying work item
+        print(f"Creating epic...")
+        
+        epic_result = await client.call_tool(
+            "create_epic",
+            {
+                "project_id": project_id,
+                "name": f"Epic {unique_id}",
+            },
+        )
+
+        epic = extract_result(epic_result)
+
+        epic_id = epic["id"]
+
+        print(f"Created epic: {epic_id}")
+
+        # 6. Update work item 2 to be under the epic
+        print(f"Setting parent relationship to epic...")
+        await client.call_tool(
+            "update_work_item",
+            {
+                "project_id": project_id,
+                "work_item_id": work_item_2_id,
+                "parent": epic_id,
+            },
+        )
+        print(f"Set epic as parent of work item 2")
+
+        # 7. List all epics
+        print(f"Listing epics in project...")
+        epics_result = await client.call_tool(
+            "list_epics",
+            {
+                "project_id": project_id,
+            },
+        )
+        epics = extract_result(epics_result)
+        print(f"Epics in project: {[epic['id'] for epic in epics['results']]}")
+
+
+        # 8. Delete work items
         print(f"Deleting work items...")
         await client.call_tool(
             "delete_work_item",
@@ -137,7 +178,15 @@ async def run_integration_test():
         )
         print(f"Deleted work item 1")
 
-        # 6. Delete project
+        # 9. Delete epic
+        print(f"Deleting epic...")
+        await client.call_tool(
+            "delete_work_item",
+            {"project_id": project_id, "work_item_id": epic_id},
+        )
+        print(f"Deleted epic") 
+
+        # 10. Delete project
         print(f"Deleting project...")
         await client.call_tool("delete_project", {"project_id": project_id})
         print(f"Deleted project")
@@ -260,6 +309,11 @@ EXPECTED_TOOLS = [
     "retrieve_work_item_property",
     "update_work_item_property",
     "delete_work_item_property",
+    # Epic tools
+    "list_epics",
+    "retrieve_epic",
+    "create_epic",
+    "update_epic",
 ]
 
 

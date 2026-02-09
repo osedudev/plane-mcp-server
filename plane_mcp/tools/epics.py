@@ -259,3 +259,27 @@ def register_epic_tools(mcp: FastMCP) -> None:
             epic_id=epic_id,
             params=params,
         )
+    
+    @mcp.tool()
+    def delete_epic(
+        project_id: str,
+        epic_id: str,        
+    ) -> None:
+        """
+        Delete a epic by ID.
+
+        Args:
+            workspace_slug: The workspace slug identifier
+            project_id: UUID of the project
+            epic_id: UUID of the epic
+
+        Returns:
+            None
+        """
+        client, workspace_slug = get_plane_client_context()
+
+        return client.work_items.delete(
+            workspace_slug=workspace_slug,
+            project_id=project_id,
+            work_item_id=epic_id,
+        )

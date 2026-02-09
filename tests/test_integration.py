@@ -181,8 +181,8 @@ async def run_integration_test():
         # 9. Delete epic
         print(f"Deleting epic...")
         await client.call_tool(
-            "delete_work_item",
-            {"project_id": project_id, "work_item_id": epic_id},
+            "delete_epic",
+            {"project_id": project_id, "epic_id": epic_id},
         )
         print(f"Deleted epic") 
 

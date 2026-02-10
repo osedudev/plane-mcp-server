@@ -2,9 +2,11 @@
 from typing import get_args
 
 from fastmcp import FastMCP
+from plane import PlaneClient
 from plane.models.enums import PriorityEnum
 from plane.models.epics import Epic, PaginatedEpicResponse
 from plane.models.query_params import PaginatedQueryParams, RetrieveQueryParams
+from plane.models.work_item_types import WorkItemType
 from plane.models.work_items import (
     CreateWorkItem,
     UpdateWorkItem,
@@ -16,9 +18,11 @@ from plane_mcp.client import get_plane_client_context
 def register_epic_tools(mcp: FastMCP) -> None:
     """Register all epic-related tools with the MCP server."""
 
-    def _get_epic_work_item_type(client, workspace_slug: str, project_id: str) -> str | None:
+    def _get_epic_work_item_type(client: PlaneClient, workspace_slug: str, project_id: str) -> WorkItemType | None:
         """Helper function to get the work item type ID for epics."""
-        response = client.work_item_types.list(workspace_slug=workspace_slug, project_id=project_id)
+        response = client.work_item_types.list(
+            workspace_slug=workspace_slug,
+            project_id=project_id,)
 
         for work_item_type in response:
             if work_item_type.is_epic:
@@ -75,6 +79,7 @@ def register_epic_tools(mcp: FastMCP) -> None:
         is_draft: bool | None = None,
         external_source: str | None = None,
         external_id: str | None = None,
+        parent: str | None = None,
         state: str | None = None,
         estimate_point: str | None = None,
     ) -> Epic:
@@ -82,10 +87,12 @@ def register_epic_tools(mcp: FastMCP) -> None:
         Create a new epic.
 
         Args:
+            workspace_slug: The workspace slug identifier
             project_id: UUID of the project
             name: Epic name (required)
             assignees: List of user IDs to assign to the epic
             labels: List of label IDs to attach to the epic
+            type_id: UUID of the epic type
             point: Story point value
             description_html: HTML description of the epic
             description_stripped: Plain text description (stripped of HTML)
@@ -93,33 +100,33 @@ def register_epic_tools(mcp: FastMCP) -> None:
             start_date: Start date (ISO 8601 format)
             target_date: Target/end date (ISO 8601 format)
             sort_order: Sort order value
-            is_draft: Whether the work item is a draft
+            is_draft: Whether the epic is a draft
             external_source: External system source name
             external_id: External system identifier
+            parent: UUID of the parent epic
             state: UUID of the state
             estimate_point: Estimate point value
 
         Returns:
-            Created Epic object
+            Created WorkItem object
         """
         client, workspace_slug = get_plane_client_context()
 
-        work_item_type = _get_epic_work_item_type(client, workspace_slug, project_id)
-
-        if work_item_type is None:
-            raise ValueError("No epic work item type found in the workspace. Ensure epics are enabled.")
-
         # Validate priority against allowed literal values
-        valid_priorities = get_args(PriorityEnum)
-        if priority is not None and priority not in valid_priorities:
-            raise ValueError(f"Invalid priority '{priority}'. Must be one of: {valid_priorities}")
-        validated_priority: PriorityEnum | None = priority  # type: ignore[assignment]
+        validated_priority: PriorityEnum | None = (
+            priority if priority in get_args(PriorityEnum) else None  # type: ignore[assignment]
+        )
+
+        epic_type = _get_epic_work_item_type(client, workspace_slug, project_id)
+
+        if epic_type is None:
+            raise ValueError("No work item type with is_epic=True found in the project")
 
         data = CreateWorkItem(
             name=name,
             assignees=assignees,
             labels=labels,
-            type_id=work_item_type.id,
+            type_id=epic_type.id,
             point=point,
             description_html=description_html,
             description_stripped=description_stripped,
@@ -130,14 +137,13 @@ def register_epic_tools(mcp: FastMCP) -> None:
             is_draft=is_draft,
             external_source=external_source,
             external_id=external_id,
+            parent=parent,
             state=state,
             estimate_point=estimate_point,
-            type=work_item_type.name,
         )
+
         work_item = client.work_items.create(
-            workspace_slug=workspace_slug,
-            project_id=project_id,
-            data=data,
+            workspace_slug=workspace_slug, project_id=project_id, data=data
         )
 
         return client.epics.retrieve(
@@ -182,7 +188,7 @@ def register_epic_tools(mcp: FastMCP) -> None:
             start_date: Start date (ISO 8601 format)
             target_date: Target/end date (ISO 8601 format)
             sort_order: Sort order value
-            is_draft: Whether the work item is a draft
+            is_draft: Whether the epic is a draft
             external_source: External system source name
             external_id: External system identifier
             state: UUID of the state

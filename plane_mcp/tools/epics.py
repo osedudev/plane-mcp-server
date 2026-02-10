@@ -8,7 +8,6 @@ from plane.models.query_params import PaginatedQueryParams, RetrieveQueryParams
 from plane.models.work_items import (
     CreateWorkItem,
     UpdateWorkItem,
-    WorkItem,
 )
 
 from plane_mcp.client import get_plane_client_context
@@ -17,9 +16,8 @@ from plane_mcp.client import get_plane_client_context
 def register_epic_tools(mcp: FastMCP) -> None:
     """Register all epic-related tools with the MCP server."""
 
-    def _get_epic_work_item_type_id() -> str | None:
+    def _get_epic_work_item_type_id(client, workspace_slug: str) -> str | None:
         """Helper function to get the work item type ID for epics."""
-        client, workspace_slug = get_plane_client_context()
         response = client.work_item_types.list(workspace_slug=workspace_slug, project_id="")
 
         for work_item_type in response:
@@ -38,18 +36,12 @@ def register_epic_tools(mcp: FastMCP) -> None:
         List all epics in a project.
 
         Args:
-            workspace_slug: The workspace slug identifier
             project_id: UUID of the project
             cursor: Pagination cursor for getting next set of results
             per_page: Number of results per page (1-100)
-            expand: Comma-separated list of related fields to expand in response
-            fields: Comma-separated list of fields to include in response
-            order_by: Field to order results by. Prefix with '-' for descending order
-            external_id: External system identifier for filtering or lookup
-            external_source: External system source name for filtering or lookup
 
         Returns:
-            List of WorkItem objects
+            List of Epic objects
         """
         client, workspace_slug = get_plane_client_context()
 
@@ -90,7 +82,6 @@ def register_epic_tools(mcp: FastMCP) -> None:
         Create a new epic.
 
         Args:
-            workspace_slug: The workspace slug identifier
             project_id: UUID of the project
             name: Epic name (required)
             assignees: List of user IDs to assign to the epic
@@ -109,16 +100,20 @@ def register_epic_tools(mcp: FastMCP) -> None:
             estimate_point: Estimate point value
 
         Returns:
-            Created WorkItem object
+            Created Epic object
         """
-        work_item_type_id = _get_epic_work_item_type_id()
-
         client, workspace_slug = get_plane_client_context()
 
+        work_item_type_id = _get_epic_work_item_type_id(client, workspace_slug)
+
+        if work_item_type_id is None:
+            raise ValueError("No epic work item type found in the workspace. Ensure epics are enabled.")
+
         # Validate priority against allowed literal values
-        validated_priority: PriorityEnum | None = (
-            priority if priority in get_args(PriorityEnum) else None  # type: ignore[assignment]
-        )
+        valid_priorities = get_args(PriorityEnum)
+        if priority is not None and priority not in valid_priorities:
+            raise ValueError(f"Invalid priority '{priority}'. Must be one of: {valid_priorities}")
+        validated_priority: PriorityEnum | None = priority  # type: ignore[assignment]
 
         data = CreateWorkItem(
             name=name,
@@ -168,12 +163,11 @@ def register_epic_tools(mcp: FastMCP) -> None:
         external_id: str | None = None,
         state: str | None = None,
         estimate_point: str | None = None,
-    ) -> WorkItem:
+    ) -> Epic:
         """
         Update an epic by ID.
 
         Args:
-            workspace_slug: The workspace slug identifier
             project_id: UUID of the project
             epic_id: UUID of the epic
             name: Epic name
@@ -193,14 +187,15 @@ def register_epic_tools(mcp: FastMCP) -> None:
             estimate_point: Estimate point value
 
         Returns:
-            Updated WorkItem object
+            Updated Epic object
         """
         client, workspace_slug = get_plane_client_context()
 
         # Validate priority against allowed literal values
-        validated_priority: PriorityEnum | None = (
-            priority if priority in get_args(PriorityEnum) else None  # type: ignore[assignment]
-        )
+        valid_priorities = get_args(PriorityEnum)
+        if priority is not None and priority not in valid_priorities:
+            raise ValueError(f"Invalid priority '{priority}'. Must be one of: {valid_priorities}")
+        validated_priority: PriorityEnum | None = priority  # type: ignore[assignment]
 
         data = UpdateWorkItem(
             name=name,
@@ -239,10 +234,9 @@ def register_epic_tools(mcp: FastMCP) -> None:
         epic_id: str,        
     ) -> Epic:
         """
-        Retrieve a epic by ID.
+        Retrieve an epic by ID.
 
         Args:
-            workspace_slug: The workspace slug identifier
             project_id: UUID of the project
             epic_id: UUID of the epic
 
@@ -266,10 +260,9 @@ def register_epic_tools(mcp: FastMCP) -> None:
         epic_id: str,        
     ) -> None:
         """
-        Delete a epic by ID.
+        Delete an epic by ID.
 
         Args:
-            workspace_slug: The workspace slug identifier
             project_id: UUID of the project
             epic_id: UUID of the epic
 

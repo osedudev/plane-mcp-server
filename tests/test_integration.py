@@ -72,7 +72,7 @@ async def run_integration_test():
 
     async with Client(transport=transport) as client:
         # 1. Create project
-        print(f"Creating project...")
+        print("Creating project...")
         project_result = await client.call_tool(
             "create_project",
             {
@@ -86,7 +86,7 @@ async def run_integration_test():
         print(f"Created project: {project_id}")
 
         # 2. Create work item 1
-        print(f"Creating work item 1...")
+        print("Creating work item 1...")
         work_item_1_result = await client.call_tool(
             "create_work_item",
             {
@@ -99,7 +99,7 @@ async def run_integration_test():
         print(f"Created work item 1: {work_item_1_id}")
 
         # 3. Create work item 2
-        print(f"Creating work item 2...")
+        print("Creating work item 2...")
         work_item_2_result = await client.call_tool(
             "create_work_item",
             {
@@ -112,7 +112,7 @@ async def run_integration_test():
         print(f"Created work item 2: {work_item_2_id}")
 
         # 4. Update work item 2 with work item 1 as parent
-        print(f"Setting parent relationship...")
+        print("Setting parent relationship...")
         await client.call_tool(
             "update_work_item",
             {
@@ -121,11 +121,11 @@ async def run_integration_test():
                 "parent": work_item_1_id,
             },
         )
-        print(f"Set work item 1 as parent of work item 2")
+        print("Set work item 1 as parent of work item 2")
 
         # 5. Create epic with work item 1 as the underlying work item
-        print(f"Creating epic...")
-        
+        print("Creating epic...")
+
         epic_result = await client.call_tool(
             "create_epic",
             {
@@ -141,7 +141,7 @@ async def run_integration_test():
         print(f"Created epic: {epic_id}")
 
         # 6. Update work item 2 to be under the epic
-        print(f"Setting parent relationship to epic...")
+        print("Setting parent relationship to epic...")
         await client.call_tool(
             "update_work_item",
             {
@@ -150,10 +150,10 @@ async def run_integration_test():
                 "parent": epic_id,
             },
         )
-        print(f"Set epic as parent of work item 2")
+        print("Set epic as parent of work item 2")
 
         # 7. List all epics
-        print(f"Listing epics in project...")
+        print("Listing epics in project...")
         epics_result = await client.call_tool(
             "list_epics",
             {
@@ -161,35 +161,34 @@ async def run_integration_test():
             },
         )
         epics = extract_result(epics_result)
-        print(f"Epics in project: {[epic['id'] for epic in epics['results']]}")
-
+        print(f"Epics in project: {[e['id'] for e in epics]}")
 
         # 8. Delete work items
-        print(f"Deleting work items...")
+        print("Deleting work items...")
         await client.call_tool(
             "delete_work_item",
             {"project_id": project_id, "work_item_id": work_item_2_id},
         )
-        print(f"Deleted work item 2")
+        print("Deleted work item 2")
 
         await client.call_tool(
             "delete_work_item",
             {"project_id": project_id, "work_item_id": work_item_1_id},
         )
-        print(f"Deleted work item 1")
+        print("Deleted work item 1")
 
         # 9. Delete epic
-        print(f"Deleting epic...")
+        print("Deleting epic...")
         await client.call_tool(
             "delete_epic",
             {"project_id": project_id, "epic_id": epic_id},
         )
-        print(f"Deleted epic") 
+        print("Deleted epic")
 
         # 10. Delete project
-        print(f"Deleting project...")
+        print("Deleting project...")
         await client.call_tool("delete_project", {"project_id": project_id})
-        print(f"Deleted project")
+        print("Deleted project")
 
         print("Integration test passed!")
 
@@ -314,6 +313,7 @@ EXPECTED_TOOLS = [
     "retrieve_epic",
     "create_epic",
     "update_epic",
+    "delete_epic",
 ]
 
 

@@ -16,9 +16,9 @@ from plane_mcp.client import get_plane_client_context
 def register_epic_tools(mcp: FastMCP) -> None:
     """Register all epic-related tools with the MCP server."""
 
-    def _get_epic_work_item_type(client, workspace_slug: str) -> str | None:
+    def _get_epic_work_item_type(client, workspace_slug: str, project_id: str) -> str | None:
         """Helper function to get the work item type ID for epics."""
-        response = client.work_item_types.list(workspace_slug=workspace_slug, project_id="")
+        response = client.work_item_types.list(workspace_slug=workspace_slug, project_id=project_id)
 
         for work_item_type in response:
             if work_item_type.is_epic:
@@ -104,7 +104,7 @@ def register_epic_tools(mcp: FastMCP) -> None:
         """
         client, workspace_slug = get_plane_client_context()
 
-        work_item_type = _get_epic_work_item_type(client, workspace_slug)
+        work_item_type = _get_epic_work_item_type(client, workspace_slug, project_id)
 
         if work_item_type is None:
             raise ValueError("No epic work item type found in the workspace. Ensure epics are enabled.")
@@ -134,9 +134,10 @@ def register_epic_tools(mcp: FastMCP) -> None:
             estimate_point=estimate_point,
             type=work_item_type.name,
         )
-
         work_item = client.work_items.create(
-            workspace_slug=workspace_slug, project_id=project_id, data=data
+            workspace_slug=workspace_slug,
+            project_id=project_id,
+            data=data,
         )
 
         return client.epics.retrieve(

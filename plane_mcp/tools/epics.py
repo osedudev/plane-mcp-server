@@ -16,13 +16,13 @@ from plane_mcp.client import get_plane_client_context
 def register_epic_tools(mcp: FastMCP) -> None:
     """Register all epic-related tools with the MCP server."""
 
-    def _get_epic_work_item_type_id(client, workspace_slug: str) -> str | None:
+    def _get_epic_work_item_type(client, workspace_slug: str) -> str | None:
         """Helper function to get the work item type ID for epics."""
         response = client.work_item_types.list(workspace_slug=workspace_slug, project_id="")
 
         for work_item_type in response:
             if work_item_type.is_epic:
-                return work_item_type.id
+                return work_item_type
 
         return None
 
@@ -104,9 +104,9 @@ def register_epic_tools(mcp: FastMCP) -> None:
         """
         client, workspace_slug = get_plane_client_context()
 
-        work_item_type_id = _get_epic_work_item_type_id(client, workspace_slug)
+        work_item_type = _get_epic_work_item_type(client, workspace_slug)
 
-        if work_item_type_id is None:
+        if work_item_type is None:
             raise ValueError("No epic work item type found in the workspace. Ensure epics are enabled.")
 
         # Validate priority against allowed literal values
@@ -119,7 +119,7 @@ def register_epic_tools(mcp: FastMCP) -> None:
             name=name,
             assignees=assignees,
             labels=labels,
-            type_id=work_item_type_id,
+            type_id=work_item_type.id,
             point=point,
             description_html=description_html,
             description_stripped=description_stripped,
@@ -132,6 +132,7 @@ def register_epic_tools(mcp: FastMCP) -> None:
             external_id=external_id,
             state=state,
             estimate_point=estimate_point,
+            type=work_item_type.name,
         )
 
         work_item = client.work_items.create(
